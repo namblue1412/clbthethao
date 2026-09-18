@@ -26,7 +26,7 @@ export const STATS = [
 // Hướng dẫn chi tiết cách lấy URL xem tại: HUONG_DAN_GOOGLE_SHEET.md
 // ======================================================================
 export const GOOGLE_SHEET_MASTER_CONFIG = {
-  SCRIPT_URL: "", // Dán link Web App Google Apps Script duy nhất vào đây
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzY-D0ytXujaAWaemrrDAJRgTRVqkRlyXZVtTdc2NkP31fKtthzFuQbHtXWqeAJKpo/exec",
   ADMIN_PASSWORD: "clbduocadmin", // Mật khẩu bảng quản trị của Chủ nhiệm
 };
 export const GOOGLE_SHEET_CONFIG = GOOGLE_SHEET_MASTER_CONFIG;
