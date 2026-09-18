@@ -6,13 +6,14 @@
  */
 
 export const FIREBASE_CONFIG = {
-  // Bạn có thể dán trực tiếp thông số từ Firebase Console vào đây:
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCnWESZjmJkFDg4V_Eu7RPYz_0QJIwN5ik",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "clbthehao.firebaseapp.com",
+  databaseURL: "https://clbthehao-default-rtdb.firebaseio.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "clbthehao",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "clbthehao.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "201769736807",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:201769736807:web:a2b3e3751127efad4a92c2",
+  measurementId: "G-SFKHVPBLF9",
 };
 
 /**
