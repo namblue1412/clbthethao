@@ -18,12 +18,22 @@ import {
   UserCheck,
   Loader2,
   KeyRound,
-  Clock
+  Clock,
+  Calendar,
+  CalendarClock,
+  Unlock,
+  Save
 } from "lucide-react";
 import {
   GOOGLE_SHEET_ACTIVITIES_CONFIG,
   saveStoredActivities
 } from "../../data/activitiesData";
+import {
+  getStoredRegistrationConfig,
+  saveStoredRegistrationConfig,
+  checkRegistrationStatus,
+  formatDateVN
+} from "../../data/registrationConfig";
 import { sound } from "../../utils/audio";
 import {
   loginWithEmail,
@@ -47,11 +57,35 @@ export default function ActivityAdminModal({
   onClose,
   activities,
   setActivities,
+  initialTab = "activities",
 }) {
   // Trạng thái xác thực
   const [firebaseUser, setFirebaseUser] = useState(null);
   const [isLocalAuth, setIsLocalAuth] = useState(false);
   const isAuthenticated = Boolean(firebaseUser || isLocalAuth);
+
+  // Phân hệ Tab: "activities" (Hoạt động & ĐRL) hoặc "registration" (Thời gian mở form)
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+
+  if (initialTab !== prevInitialTab) {
+    setPrevInitialTab(initialTab);
+    setActiveTab(initialTab);
+  }
+
+  // Cấu hình thời gian thu thập form
+  const [regConfigState, setRegConfigState] = useState(getStoredRegistrationConfig);
+
+  // Lắng nghe cập nhật cấu hình từ hệ thống bên ngoài (localStorage/event)
+  useEffect(() => {
+    const handleConfigEvent = (e) => {
+      if (e?.detail) {
+        setRegConfigState(e.detail);
+      }
+    };
+    window.addEventListener("clb_registration_config_changed", handleConfigEvent);
+    return () => window.removeEventListener("clb_registration_config_changed", handleConfigEvent);
+  }, []);
 
   // Form đăng nhập
   const [emailInput, setEmailInput] = useState("");
@@ -345,6 +379,21 @@ export default function ActivityAdminModal({
     setTimeout(() => setToastMessage(""), 3500);
   };
 
+  // Lưu cài đặt thời gian mở form
+  const handleSaveRegistrationSettings = (e) => {
+    e.preventDefault();
+    if (!regConfigState.startDate || !regConfigState.endDate) {
+      alert("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!");
+      return;
+    }
+    saveStoredRegistrationConfig(regConfigState);
+    showToast("Đã lưu thời gian thu thập form thành công!");
+    sound.playSpark();
+  };
+
+  // Trạng thái tính toán xem trước cho Admin
+  const regPreviewStatus = checkRegistrationStatus(regConfigState);
+
   if (!isOpen) return null;
 
   return (
@@ -635,8 +684,52 @@ export default function ActivityAdminModal({
           ) : (
             /* MÀN HÌNH DASHBOARD QUẢN TRỊ */
             <div>
-              {/* THANH TRẠNG THÁI VÀ NÚT THÊM */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+              {/* THANH CHUYỂN TAB QUẢN TRỊ */}
+              <div className="flex border-b border-white/10 mb-6 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    setActiveTab("activities");
+                  }}
+                  className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition -mb-px rounded-t-xl ${
+                    activeTab === "activities"
+                      ? "border-emerald-400 text-emerald-300 bg-white/[0.04]"
+                      : "border-transparent text-white/50 hover:text-white hover:bg-white/[0.02]"
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <span>Hoạt Động & ĐRL ({activities.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    setActiveTab("registration");
+                  }}
+                  className={`flex items-center gap-2 px-5 py-3 text-xs font-bold border-b-2 transition -mb-px rounded-t-xl ${
+                    activeTab === "registration"
+                      ? "border-emerald-400 text-emerald-300 bg-white/[0.04]"
+                      : "border-transparent text-white/50 hover:text-white hover:bg-white/[0.02]"
+                  }`}
+                >
+                  <CalendarClock className="w-4 h-4 text-lime-400" />
+                  <span>Thời Gian Thu Thập Form</span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      regPreviewStatus.isOpen ? "bg-emerald-400 animate-pulse" : "bg-rose-500"
+                    }`}
+                    title={regPreviewStatus.isOpen ? "Đang mở nhận đơn" : "Đã khóa cổng"}
+                  />
+                </button>
+              </div>
+
+              {/* TAB 1: QUẢN TRỊ HOẠT ĐỘNG */}
+              {activeTab === "activities" && (
+                <div>
+                  {/* THANH TRẠNG THÁI VÀ NÚT THÊM */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
                 <div className="flex items-center gap-2 text-xs text-white/70">
                   <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                   <span>
@@ -989,6 +1082,223 @@ export default function ActivityAdminModal({
                     </div>
                   )}
                 </div>
+              )}
+                </div>
+              )}
+
+              {/* TAB 2: CÀI ĐẶT THỜI GIAN FORM ĐĂNG KÝ */}
+              {activeTab === "registration" && (
+                <form onSubmit={handleSaveRegistrationSettings} className="py-2 space-y-6">
+                  {/* TIÊU ĐỀ & GIỚI THIỆU */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+                    <div>
+                      <h3 className="text-base font-black text-white flex items-center gap-2">
+                        <CalendarClock className="w-5 h-5 text-emerald-400" />
+                        Cài Đặt Thời Gian Thu Thập Form
+                      </h3>
+                      <p className="text-xs text-white/60 mt-0.5">
+                        Admin cài đặt ngày mở và kết thúc. Sau ngày kết thúc, hệ thống sẽ tự động khóa cổng (auto-lock) và không mở form nữa.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-neutral-950 font-bold text-xs shadow-lg hover:scale-105 transition active:scale-95 shrink-0 self-start sm:self-auto"
+                    >
+                      <Save className="w-4 h-4" /> Lưu Cài Đặt
+                    </button>
+                  </div>
+
+                  {/* 1. CHỌN CHẾ ĐỘ HOẠT ĐỘNG */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-2 uppercase tracking-wider">
+                      1. Chế Độ Mở Cổng Điền Form
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Tự động theo ngày */}
+                      <div
+                        onClick={() => {
+                          sound.playPop();
+                          setRegConfigState((prev) => ({ ...prev, mode: "auto" }));
+                        }}
+                        className={`relative p-4 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${
+                          regConfigState.mode === "auto"
+                            ? "bg-emerald-500/15 border-emerald-400/80 shadow-[0_0_20px_rgba(52,211,153,0.15)]"
+                            : "bg-white/[0.03] border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                            Tự Động Theo Ngày
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Khuyên dùng
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-white/60 leading-relaxed">
+                          Tự động mở cổng từ ngày bắt đầu và <b>khóa form sau 23:59 ngày kết thúc</b>.
+                        </p>
+                      </div>
+
+                      {/* Luôn mở */}
+                      <div
+                        onClick={() => {
+                          sound.playPop();
+                          setRegConfigState((prev) => ({ ...prev, mode: "open" }));
+                        }}
+                        className={`relative p-4 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${
+                          regConfigState.mode === "open"
+                            ? "bg-emerald-500/15 border-emerald-400/80 shadow-[0_0_20px_rgba(52,211,153,0.15)]"
+                            : "bg-white/[0.03] border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                            Luôn Mở Nhận Đơn
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-white/60 leading-relaxed">
+                          Form mở liên tục cho sinh viên đăng ký, không tính ngày hết hạn.
+                        </p>
+                      </div>
+
+                      {/* Khóa ngay */}
+                      <div
+                        onClick={() => {
+                          sound.playPop();
+                          setRegConfigState((prev) => ({ ...prev, mode: "closed" }));
+                        }}
+                        className={`relative p-4 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${
+                          regConfigState.mode === "closed"
+                            ? "bg-rose-500/15 border-rose-400/80 shadow-[0_0_20px_rgba(244,63,94,0.15)]"
+                            : "bg-white/[0.03] border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <Lock className="w-3.5 h-3.5 text-rose-400" />
+                            Khóa Cổng Ngay
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-white/60 leading-relaxed">
+                          Đóng cổng đăng ký ngay lập tức và chặn mọi thao tác điền form.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. CHỌN KHOẢNG NGÀY ĐƯỢC ĐIỀN FORM */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-2 uppercase tracking-wider">
+                      2. Khoảng Ngày Được Điền Form
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                        <label className="block text-xs font-semibold text-white/80 mb-2 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                          Từ Ngày (Bắt đầu nhận form) *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={regConfigState.startDate}
+                          onChange={(e) =>
+                            setRegConfigState((prev) => ({ ...prev, startDate: e.target.value }))
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs focus:outline-none focus:border-emerald-400"
+                        />
+                        <p className="text-[11px] text-white/50 mt-2">
+                          Mở cổng từ 00:00 ngày:{" "}
+                          <b className="text-emerald-300">
+                            {formatDateVN(regConfigState.startDate) || "--/--/----"}
+                          </b>
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                        <label className="block text-xs font-semibold text-white/80 mb-2 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-rose-400" />
+                          Đến Ngày (Kết thúc & Tự động khóa) *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={regConfigState.endDate}
+                          onChange={(e) =>
+                            setRegConfigState((prev) => ({ ...prev, endDate: e.target.value }))
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs focus:outline-none focus:border-emerald-400"
+                        />
+                        <p className="text-[11px] text-white/50 mt-2">
+                          Tự động khóa sau 23:59 ngày:{" "}
+                          <b className="text-rose-300">
+                            {formatDateVN(regConfigState.endDate) || "--/--/----"}
+                          </b>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. LỜI NHẮN HIỂN THỊ KHI ĐÓNG FORM */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-2 uppercase tracking-wider">
+                      3. Thông Báo Hiển Thị Cho Sinh Viên Khi Cổng Khóa
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={regConfigState.closedMessage}
+                      onChange={(e) =>
+                        setRegConfigState((prev) => ({ ...prev, closedMessage: e.target.value }))
+                      }
+                      placeholder="Nhập thông báo gửi đến sinh viên khi đợt nhận đơn kết thúc..."
+                      className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-xs placeholder-white/30 focus:outline-none focus:border-emerald-400"
+                    />
+                  </div>
+
+                  {/* 4. XEM TRƯỚC TRỰC QUAN (LIVE PREVIEW) */}
+                  <div className="p-4 rounded-2xl bg-neutral-950/80 border border-white/15 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white/70 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        Trạng Thái Thực Tế (Sinh viên thấy trên website)
+                      </span>
+                      {regPreviewStatus.isOpen ? (
+                        <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          ĐANG MỞ ĐIỀN FORM
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
+                          <Lock className="w-3 h-3 text-rose-400" />
+                          CỔNG ĐÃ TỰ ĐỘNG KHÓA
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-white/70 space-y-1 pt-1">
+                      <p>
+                        • <b>Thời gian hiển thị:</b>{" "}
+                        <span className="text-emerald-300">{regPreviewStatus.dateRangeText}</span>
+                      </p>
+                      <p>
+                        • <b>Thông báo đính kèm:</b>{" "}
+                        <span className="text-white/90">{regPreviewStatus.message}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* NÚT LƯU CÀI ĐẶT */}
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="submit"
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-neutral-950 text-xs font-bold shadow-lg hover:scale-105 transition active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Save className="w-4 h-4" /> Xác Nhận Lưu Cấu Hình Thời Gian
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
           )}

@@ -20,6 +20,8 @@ import {
   Flame,
   Award,
   ShieldCheck,
+  Calendar,
+  Lock,
 } from "lucide-react";
 
 import Hero from "./components/Hero";
@@ -34,6 +36,11 @@ import {
   saveStoredActivities,
   GOOGLE_SHEET_ACTIVITIES_CONFIG,
 } from "./data/activitiesData";
+import {
+  getStoredRegistrationConfig,
+  checkRegistrationStatus,
+  fetchRemoteRegistrationConfig,
+} from "./data/registrationConfig";
 import { sound } from "./utils/audio";
 
 export default function CLBTheThaoDuoc2026() {
@@ -41,6 +48,8 @@ export default function CLBTheThaoDuoc2026() {
   const [soundOn, setSoundOn] = useState(true);
   const [activities, setActivities] = useState(getStoredActivities);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState("activities");
+  const [regConfig, setRegConfig] = useState(getStoredRegistrationConfig);
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 120,
@@ -78,6 +87,29 @@ export default function CLBTheThaoDuoc2026() {
     return () => window.removeEventListener("mousemove", handler);
   }, []);
 
+  // Mở modal quản trị theo tab mong muốn
+  const handleOpenAdmin = (tab = "activities") => {
+    setAdminInitialTab(tab);
+    setIsAdminOpen(true);
+  };
+
+  // Đồng bộ cấu hình thời gian mở form từ xa và lắng nghe cập nhật tức thì
+  useEffect(() => {
+    fetchRemoteRegistrationConfig().then((remote) => {
+      if (remote) setRegConfig(remote);
+    });
+
+    const handleConfigChange = (e) => {
+      if (e.detail) {
+        setRegConfig(e.detail);
+      } else {
+        setRegConfig(getStoredRegistrationConfig());
+      }
+    };
+    window.addEventListener("clb_registration_config_changed", handleConfigChange);
+    return () => window.removeEventListener("clb_registration_config_changed", handleConfigChange);
+  }, []);
+
   const toggleSound = () => {
     const nextState = sound.toggle();
     setSoundOn(nextState);
@@ -104,7 +136,7 @@ export default function CLBTheThaoDuoc2026() {
         setOpen={setOpenMenu}
         soundOn={soundOn}
         toggleSound={toggleSound}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => handleOpenAdmin("activities")}
       />
 
       {/* 1. HERO VỚI ẢNH TẬP THỂ (TAPTHE.JPG) TO ĐẸP & TIÊU ĐỀ BÊN TRÁI */}
@@ -122,20 +154,23 @@ export default function CLBTheThaoDuoc2026() {
       {/* 4. HOẠT ĐỘNG TRONG NĂM & ĐIỂM RÈN LUYỆN CHO SINH VIÊN */}
       <ActivitiesSection
         activities={activities}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => handleOpenAdmin("activities")}
       />
 
       {/* 5. ĐỐI TÁC & NHÀ TÀI TRỢ */}
       <SponsorSection />
 
-      {/* 6. THƯ VIỆN KHOẢNH KHẮC PARALLAX 3D */}
+      {/* 6. THƯ VIỆN KHOẢSH KHẮC PARALLAX 3D */}
       <GalleryParallax />
 
-      {/* 7. FORM ĐĂNG KÝ VỚI THẺ VẬN ĐỘNG VIÊN 3D HOLOGRAPHIC */}
-      <JoinSection />
+      {/* 7. FORM ĐĂNG KÝ VỚI THẺ VẬN ĐỘNG VIÊN 3D HOLOGRAPHIC & THỜI GIAN MỞ FORM */}
+      <JoinSection
+        regConfig={regConfig}
+        onOpenAdmin={handleOpenAdmin}
+      />
 
       {/* CHÂN TRANG FOOTER */}
-      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+      <Footer onOpenAdmin={() => handleOpenAdmin("activities")} />
 
       {/* MODAL QUẢN TRỊ DÀNH RIÊNG CHO CHỦ NHIỆM CLB */}
       <ActivityAdminModal
@@ -143,6 +178,7 @@ export default function CLBTheThaoDuoc2026() {
         onClose={() => setIsAdminOpen(false)}
         activities={activities}
         setActivities={setActivities}
+        initialTab={adminInitialTab}
       />
     </main>
   );
@@ -646,9 +682,9 @@ function GalleryCard({ imageNumber }) {
 }
 
 /**
- * Khu vực Đăng ký (Join CTA) tích hợp Thẻ Vận Động Viên 3D tương tác realtime
+ * Khu vực Đăng ký (Join CTA) tích hợp Thẻ Vận Động Viên 3D tương tác realtime & Thông tin thời gian
  */
-function JoinSection() {
+function JoinSection({ regConfig, onOpenAdmin }) {
   const [form, setForm] = useState({
     name: "",
     lop: "",
@@ -658,6 +694,8 @@ function JoinSection() {
     email: "",
     ban: "pickleball", // Mặc định gợi ý Ban Pickleball mới 2026
   });
+
+  const statusInfo = checkRegistrationStatus(regConfig);
 
   return (
     <motion.section
@@ -687,18 +725,55 @@ function JoinSection() {
         {/* BỐ TRÍ 2 CỘT: THẺ VẬN ĐỘNG VIÊN 3D HOLOGRAPHIC (TRÁI) & FORM (PHẢI) */}
         <div className="grid lg:grid-cols-12 gap-12 items-start">
           
-          {/* CỘT TRÁI: THẺ VẬN ĐỘNG VIÊN 3D REALTIME */}
+          {/* CỘT TRÁI: THẺ VẬN ĐỘNG VIÊN 3D REALTIME & LỊCH ĐIỀN FORM */}
           <div className="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-32">
-            <div className="text-center mb-4">
-              <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-400 flex items-center justify-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" /> Thẻ Thành Viên Ảo 3D
-              </span>
-              <p className="text-xs text-white/50 mt-1">
-                (Thẻ tự động cập nhật khi bạn nhập form bên phải)
-              </p>
+            
+            {/* THÔNG TIN THỜI GIAN ĐIỀN FORM HIỂN THỊ CHO USER BIẾT */}
+            <div className="w-full max-w-[420px] mb-6 p-4 rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-md shadow-xl">
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <span className="text-[11px] uppercase font-black tracking-wider text-white/70 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                  Thời Gian Điền Form
+                </span>
+
+                {statusInfo.isOpen ? (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Đang Mở Nhận Đơn
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-rose-400" />
+                    Cổng Đã Khóa
+                  </span>
+                )}
+              </div>
+
+              <div className="bg-black/40 rounded-2xl p-3 border border-white/5 space-y-1">
+                <div className="text-xs text-white/90 font-medium flex items-center justify-between">
+                  <span>Khoảng thời gian:</span>
+                  <span className="font-bold text-emerald-300">{statusInfo.dateRangeText}</span>
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed pt-0.5">
+                  {statusInfo.isOpen
+                    ? (statusInfo.daysLeft !== null
+                        ? `⚡ Hạn chót đến hết 23:59 ngày ${statusInfo.endDateFormatted} (còn ${statusInfo.daysLeft} ngày). Sau thời gian này hệ thống sẽ tự động khóa.`
+                        : "Cổng đăng ký đang mở tiếp nhận hồ sơ trực tuyến.")
+                    : (statusInfo.status === "upcoming"
+                        ? `⏳ Cổng đăng ký sẽ mở vào ngày ${statusInfo.startDateFormatted}.`
+                        : `⛔ Đợt điền form đã kết thúc vào ngày ${statusInfo.endDateFormatted}. Hệ thống đã tự động khóa phần đăng ký.`)}
+                </p>
+              </div>
             </div>
 
-            {/* Thẻ 3D */}
+            {/* TIÊU ĐỀ THẺ 3D (ĐÃ GỠ BỎ DÒNG CHÚ THÍCH THEO YÊU CẦU CỦA BẠN) */}
+            <div className="text-center mb-3">
+              <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-400 flex items-center justify-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Thẻ Vận Động Viên CLB
+              </span>
+            </div>
+
+            {/* Thẻ 3D - GIỮ NGUYÊN VẸN */}
             <AthleteCard3D form={form} />
 
             {/* Hướng dẫn các bước */}
@@ -732,9 +807,14 @@ function JoinSection() {
             </div>
           </div>
 
-          {/* CỘT PHẢI: FORM ĐĂNG KÝ */}
+          {/* CỘT PHẢI: FORM ĐĂNG KÝ (TỰ ĐỘNG KHÓA NẾU HẾT HẠN) */}
           <div className="lg:col-span-7">
-            <JoinForm form={form} setForm={setForm} />
+            <JoinForm
+              form={form}
+              setForm={setForm}
+              statusInfo={statusInfo}
+              onOpenAdmin={onOpenAdmin}
+            />
           </div>
 
         </div>
@@ -744,11 +824,74 @@ function JoinSection() {
   );
 }
 
-function JoinForm({ form, setForm }) {
+function JoinForm({ form, setForm, statusInfo, onOpenAdmin }) {
   const [status, setStatus] = useState("idle");
+
+  // NẾU HẾT HẠN HOẶC ĐÃ ĐÓNG: TỰ ĐỘNG KHÓA FORM VÀ KHÔNG CHO GỬI NỮA
+  if (!statusInfo?.isOpen) {
+    return (
+      <div className="relative">
+        <div className="absolute -inset-3 bg-gradient-to-r from-rose-500/20 via-amber-500/10 to-rose-500/20 blur-3xl opacity-60 -z-10 rounded-[3rem]" />
+
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-rose-500/30 bg-neutral-900/90 backdrop-blur-2xl p-8 sm:p-12 shadow-2xl text-center">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-5 shadow-inner">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 mb-3">
+            {statusInfo?.status === "upcoming" ? "Chưa Đến Thời Gian Mở Đơn" : "Cổng Đăng Ký Đã Tự Động Khóa"}
+          </span>
+
+          <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">
+            {statusInfo?.status === "upcoming" ? "Sắp Mở Đợt Tuyển Thành Viên" : "Thời Hạn Điền Form Đã Kết Thúc"}
+          </h3>
+
+          <div className="max-w-md mx-auto space-y-3 text-white/70 text-xs sm:text-sm">
+            <p className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white/90 leading-relaxed font-medium">
+              {statusInfo?.message}
+            </p>
+
+            <p className="text-white/50 text-xs">
+              Thời gian nhận đơn đợt này: <b>{statusInfo?.startDateFormatted}</b> đến hết ngày <b>{statusInfo?.endDateFormatted}</b>.
+              Hệ thống tự động khóa phần này và không tiếp nhận form nữa sau ngày kết thúc.
+            </p>
+
+            <p className="text-white/60 text-xs pt-1">
+              Hẹn gặp lại bạn ở các đợt tuyển quân tiếp theo của CLB Thể Thao Trường Dược!
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="#home"
+              onClick={() => sound.playPop()}
+              className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition border border-white/10"
+            >
+              Về Trang Chủ
+            </a>
+
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                if (onOpenAdmin) onOpenAdmin("registration");
+              }}
+              className="px-5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition border border-emerald-500/30 flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" /> Quản Trị: Cài Đặt Thời Gian
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
+    if (!statusInfo?.isOpen) {
+      alert("Thời gian điền form đã kết thúc. Cổng đăng ký hiện đang đóng!");
+      return;
+    }
     sound.playSpark();
     setStatus("submitting");
 
@@ -801,13 +944,26 @@ function JoinForm({ form, setForm }) {
         onSubmit={onSubmit}
         className="relative overflow-hidden rounded-[2.5rem] border border-white/15 bg-neutral-900/85 backdrop-blur-2xl p-7 sm:p-10 shadow-2xl"
       >
-        <div className="mb-7">
+        <div className="mb-6">
           <h3 className="text-2xl font-black text-white mb-2">
             Đơn Đăng Ký Thành Viên Mới
           </h3>
-          <p className="text-white/60 text-xs sm:text-sm">
+          <p className="text-white/60 text-xs sm:text-sm mb-4">
             Vui lòng điền thông tin chính xác để CLB gửi lịch sinh hoạt đến bạn.
           </p>
+
+          {/* BANNER THÔNG BÁO THỜI GIAN ĐIỀN FORM VÀ HẠN CHÓT */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300">
+            <span className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Thời gian mở đơn: <b>{statusInfo.startDateFormatted} — {statusInfo.endDateFormatted}</b></span>
+            </span>
+            {statusInfo.daysLeft !== null && (
+              <span className="font-bold text-[10px] px-2 py-0.5 rounded-lg bg-emerald-500/20 self-start sm:self-auto">
+                Hạn chót: Còn {statusInfo.daysLeft} ngày
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-5 mb-7">
