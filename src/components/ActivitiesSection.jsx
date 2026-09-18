@@ -77,7 +77,7 @@ export default function ActivitiesSection({
               transition={{ delay: 0.2 }}
               className="mt-3 text-sm sm:text-base text-white/65 max-w-2xl leading-relaxed"
             >
-              Tổng hợp các hoạt động thể thao trong năm, tra cứu mức điểm rèn luyện phân chia theo từng vai trò tham gia và tải danh sách đã ký duyệt chính thức.
+              Theo dõi các giải đấu trong năm và tra cứu danh sách điểm rèn luyện của bạn.
             </motion.p>
           </div>
 
@@ -161,6 +161,19 @@ export default function ActivitiesSection({
  */
 function ActivityCard({ activity }) {
   const hasDrl = Boolean(activity.drlLink && activity.drlLink.trim() !== "");
+  const isOngoing = activity.status === "in_progress";
+  const isUpcoming = activity.status === "upcoming";
+
+  // Xử lý danh sách bài viết (hỗ trợ cả 1 link lẫn nhiều link)
+  const postLinks = useMemo(() => {
+    if (Array.isArray(activity.postLinks) && activity.postLinks.length > 0) {
+      return activity.postLinks.filter((p) => p && p.url && p.url.trim() !== "");
+    }
+    if (activity.postLink && activity.postLink.trim() !== "") {
+      return [{ title: "Xem bài viết", url: activity.postLink.trim() }];
+    }
+    return [];
+  }, [activity.postLinks, activity.postLink]);
 
   // Phân biệt biểu tượng và màu sắc theo tên vai trò
   const getRoleBadgeStyle = (roleName = "") => {
@@ -209,13 +222,21 @@ function ActivityCard({ activity }) {
 
           {/* TRẠNG THÁI HIỆU LỰC DANH SÁCH ĐIỂM */}
           <div className="absolute top-4 right-4 z-10">
-            {hasDrl ? (
+            {isOngoing ? (
+              <span className="px-3 py-1 rounded-full bg-amber-500/90 text-neutral-950 font-black text-[11px] shadow-lg inline-flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Đang diễn ra
+              </span>
+            ) : isUpcoming ? (
+              <span className="px-3 py-1 rounded-full bg-cyan-500/90 text-neutral-950 font-black text-[11px] shadow-lg inline-flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Sắp diễn ra
+              </span>
+            ) : hasDrl ? (
               <span className="px-3 py-1 rounded-full bg-emerald-500/90 text-neutral-950 font-black text-[11px] shadow-lg inline-flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Đã Có DS Điểm
               </span>
             ) : (
-              <span className="px-3 py-1 rounded-full bg-neutral-900/90 border border-amber-400/40 text-amber-300 font-semibold text-[11px] shadow-lg inline-flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Không còn hiệu lực
+              <span className="px-3 py-1 rounded-full bg-neutral-900/90 border border-white/20 text-white/60 font-semibold text-[11px] shadow-lg inline-flex items-center gap-1.5">
+                Không còn hiệu lực
               </span>
             )}
           </div>
@@ -271,40 +292,71 @@ function ActivityCard({ activity }) {
       </div>
 
       {/* CÁC NÚT BẤM HÀNH ĐỘNG DƯỚI CÙNG THẺ */}
-      <div className="p-6 pt-0 flex flex-wrap items-center gap-3">
-        {/* NÚT XEM DANH SÁCH ĐRL HOẶC THÔNG BÁO KHÔNG CÒN HIỆU LỰC */}
-        {hasDrl ? (
-          <a
-            href={activity.drlLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => sound.playSpark()}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-neutral-950 font-bold text-xs shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-95 transition-all duration-300"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Xem Danh Sách ĐRL</span>
-          </a>
-        ) : (
-          <div
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 font-medium text-xs cursor-not-allowed select-none"
-            title="Hoạt động này không còn hiệu lực tra cứu danh sách điểm rèn luyện"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-white/30" />
-            <span>Danh Sách ĐRL (Không còn hiệu lực)</span>
-          </div>
-        )}
+      <div className="p-6 pt-0 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* NÚT XEM DANH SÁCH ĐRL HOẶC THÔNG BÁO CHƯA CÓ / KHÔNG CÒN HIỆU LỰC */}
+          {hasDrl ? (
+            <a
+              href={activity.drlLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => sound.playSpark()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 text-neutral-950 font-bold text-xs shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-95 transition-all duration-300"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Xem Danh Sách ĐRL</span>
+            </a>
+          ) : isOngoing || isUpcoming ? (
+            <div
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-300 font-semibold text-xs select-none"
+              title="Hoạt động đang diễn ra, chưa có danh sách chính thức"
+            >
+              <Clock className="w-4 h-4 text-amber-400" />
+              <span>Chưa có danh sách chính thức</span>
+            </div>
+          ) : (
+            <div
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/10 text-white/40 font-medium text-xs cursor-not-allowed select-none"
+              title="Hoạt động này không còn hiệu lực tra cứu danh sách điểm rèn luyện"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-white/30" />
+              <span>Không còn hiệu lực</span>
+            </div>
+          )}
 
-        {/* NÚT XEM BÀI VIẾT FANPAGE (NẾU CÓ) */}
-        {activity.postLink && (
-          <a
-            href={activity.postLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white text-xs font-semibold transition hover:border-emerald-400/40"
-          >
-            <span>Xem Bài Viết</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          {/* NẾU CHỈ CÓ 1 LINK BÀI VIẾT THÌ HIỂN THỊ CÙNG DÒNG */}
+          {postLinks.length === 1 && (
+            <a
+              href={postLinks[0].url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white text-xs font-semibold transition hover:border-emerald-400/40"
+            >
+              <span>{postLinks[0].title || "Xem Bài Viết"}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
+
+        {/* NẾU CÓ TỪ 2 LINK BÀI VIẾT TRỞ LÊN THÌ HIỂN THỊ THÀNH DANH SÁCH RÕ RÀNG */}
+        {postLinks.length > 1 && (
+          <div className="pt-2 border-t border-white/5 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-white/50 flex items-center gap-1 font-medium">
+              <ExternalLink className="w-3 h-3 text-emerald-400" /> Bài viết:
+            </span>
+            {postLinks.map((p, pIdx) => (
+              <a
+                key={pIdx}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 border border-white/15 hover:border-emerald-400/40 text-white/85 hover:text-emerald-300 text-xs font-medium transition"
+              >
+                <span>{p.title || `Bài viết ${pIdx + 1}`}</span>
+                <ExternalLink className="w-3 h-3 text-white/40" />
+              </a>
+            ))}
+          </div>
         )}
       </div>
     </motion.div>

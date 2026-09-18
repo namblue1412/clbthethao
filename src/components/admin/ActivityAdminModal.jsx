@@ -17,7 +17,8 @@ import {
   ArrowRight,
   UserCheck,
   Loader2,
-  KeyRound
+  KeyRound,
+  Clock
 } from "lucide-react";
 import {
   GOOGLE_SHEET_ACTIVITIES_CONFIG,
@@ -79,9 +80,9 @@ export default function ActivityAdminModal({
       { role: "Vận Động Viên", points: "+4 ĐRL" },
       { role: "Cổ Động Viên", points: "+2 ĐRL" },
     ],
-    status: "available",
+    status: "in_progress", // available | in_progress | upcoming | expired
     drlLink: "",
-    postLink: "",
+    postLinks: [{ title: "Bài viết phát động", url: "" }],
     imageUrl: "",
     description: "",
   };
@@ -192,6 +193,13 @@ export default function ActivityAdminModal({
   // Mở form chỉnh sửa
   const handleOpenEdit = (act) => {
     setEditingId(act.id);
+    const initialPostLinks =
+      Array.isArray(act.postLinks) && act.postLinks.length > 0
+        ? JSON.parse(JSON.stringify(act.postLinks))
+        : act.postLink && act.postLink.trim()
+        ? [{ title: "Bài viết", url: act.postLink.trim() }]
+        : [{ title: "Bài viết", url: "" }];
+
     setFormData({
       title: act.title || "",
       year: act.year || "2025 - 2026",
@@ -200,13 +208,36 @@ export default function ActivityAdminModal({
       rolesPoints: act.rolesPoints && act.rolesPoints.length > 0
         ? JSON.parse(JSON.stringify(act.rolesPoints))
         : [{ role: "Ban Tổ Chức", points: "+5 ĐRL" }],
-      status: act.status || "available",
+      status: act.status || (act.drlLink ? "available" : "in_progress"),
       drlLink: act.drlLink || "",
-      postLink: act.postLink || "",
+      postLinks: initialPostLinks,
       imageUrl: act.imageUrl || "",
       description: act.description || "",
     });
     setIsFormOpen(true);
+  };
+
+  // Thao tác với danh sách link bài viết
+  const handleAddPostLink = () => {
+    setFormData((prev) => ({
+      ...prev,
+      postLinks: [...prev.postLinks, { title: "", url: "" }],
+    }));
+  };
+
+  const handleRemovePostLink = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      postLinks: prev.postLinks.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handlePostLinkChange = (index, field, value) => {
+    setFormData((prev) => {
+      const updated = [...prev.postLinks];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, postLinks: updated };
+    });
   };
 
   // Thêm dòng vai trò mới
@@ -256,11 +287,8 @@ export default function ActivityAdminModal({
       return;
     }
 
-    // Tự động điều chỉnh trạng thái nếu để trống link ĐRL
-    let finalStatus = formData.status;
-    if (!formData.drlLink.trim() && finalStatus === "available") {
-      finalStatus = "expired"; // Đánh dấu không còn hiệu lực
-    }
+    const filteredPostLinks = formData.postLinks.filter((p) => p.url && p.url.trim() !== "");
+    const primaryPostLink = filteredPostLinks.length > 0 ? filteredPostLinks[0].url : "";
 
     const activityPayload = {
       id: editingId || generateId(),
@@ -269,9 +297,10 @@ export default function ActivityAdminModal({
       semester: formData.semester,
       date: formData.date.trim() || getCurrentDate(),
       rolesPoints: formData.rolesPoints.filter((r) => r.role.trim() !== ""),
-      status: finalStatus,
+      status: formData.status,
       drlLink: formData.drlLink.trim(),
-      postLink: formData.postLink.trim(),
+      postLink: primaryPostLink,
+      postLinks: filteredPostLinks,
       imageUrl: formData.imageUrl.trim() || "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1200&q=80",
       description: formData.description.trim(),
     };
@@ -702,6 +731,30 @@ export default function ActivityAdminModal({
                     </div>
                   </div>
 
+                  {/* THANH ĐIỀU CHỈNH TRẠNG THÁI HOẠT ĐỘNG */}
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-1.5">
+                    <label className="block text-xs font-bold text-white flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      Trạng Thái Hoạt Động & Danh Sách ĐRL *
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-white/15 text-white text-xs font-semibold focus:outline-none focus:border-emerald-400"
+                    >
+                      <option value="in_progress">🟡 Đang diễn ra (Hiển thị: Chưa có danh sách chính thức)</option>
+                      <option value="available">🟢 Đã có danh sách điểm rèn luyện (Mở link file)</option>
+                      <option value="upcoming">🔵 Sắp diễn ra (Chưa mở danh sách)</option>
+                      <option value="expired">⚪ Đã kết thúc (Hiển thị: Không còn hiệu lực)</option>
+                    </select>
+                    <p className="text-[11px] text-white/50">
+                      {formData.status === "in_progress" && "👉 Sinh viên sẽ thấy nhãn 'Đang diễn ra' và nút 'Chưa có danh sách chính thức'."}
+                      {formData.status === "available" && "👉 Sinh viên có thể bấm vào nút để mở trực tiếp file danh sách điểm."}
+                      {formData.status === "expired" && "👉 Dành cho các hoạt động cũ từ năm trước (nút 'Không còn hiệu lực')."}
+                      {formData.status === "upcoming" && "👉 Dành cho giải đấu sắp diễn ra."}
+                    </p>
+                  </div>
+
                   {/* KHU VỰC QUẢN LÝ MỨC ĐIỂM THEO VAI TRÒ */}
                   <div className="p-4 rounded-2xl bg-black/40 border border-white/10">
                     <div className="flex items-center justify-between mb-2">
@@ -756,7 +809,7 @@ export default function ActivityAdminModal({
                         Link File Danh Sách ĐRL <span className="text-white/40 font-normal">(Không bắt buộc)</span>
                       </label>
                       <span className="text-[10px] text-yellow-300/80">
-                        Nếu để trống ➔ Tự động hiện "Không còn hiệu lực"
+                        Nếu để trống và đang diễn ra ➔ Hiện "Chưa có danh sách chính thức"
                       </span>
                     </div>
                     <input
@@ -767,30 +820,65 @@ export default function ActivityAdminModal({
                     />
                   </div>
 
-                  {/* Hàng 2 cột: Link bài viết Facebook & Link ảnh bìa */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-white/80 mb-1">
-                        Link Bài Viết Fanpage <span className="text-white/40 font-normal">(Tùy chọn)</span>
+                  {/* LINK CÁC BÀI VIẾT FANPAGE / TRUYỀN THÔNG (HỖ TRỢ NHIỀU LINK) */}
+                  <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                        Các Link Bài Viết / Truyền Thông (Facebook, Fanpage...)
                       </label>
-                      <input
-                        value={formData.postLink}
-                        onChange={(e) => setFormData({ ...formData, postLink: e.target.value })}
-                        placeholder="Link post Facebook / bài thông báo..."
-                        className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-white placeholder-white/30 text-xs focus:outline-none focus:border-emerald-400"
-                      />
+                      <button
+                        type="button"
+                        onClick={handleAddPostLink}
+                        className="text-[11px] font-bold text-lime-400 hover:underline inline-flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Thêm link bài viết
+                      </button>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-white/80 mb-1">
-                        Link Ảnh Bìa Hoạt Động <span className="text-white/40 font-normal">(Tùy chọn)</span>
-                      </label>
-                      <input
-                        value={formData.imageUrl}
-                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                        placeholder="URL hình ảnh đại diện..."
-                        className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-white placeholder-white/30 text-xs focus:outline-none focus:border-emerald-400"
-                      />
+                    <p className="text-[11px] text-white/50">
+                      Bạn có thể nhập nhiều link (Ví dụ: bài phát động, album ảnh, bài tổng kết giải...).
+                    </p>
+
+                    <div className="space-y-2">
+                      {formData.postLinks.map((p, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            value={p.title}
+                            onChange={(e) => handlePostLinkChange(idx, "title", e.target.value)}
+                            placeholder="Tiêu đề link (VD: Bài phát động, Album ảnh...)"
+                            className="w-1/3 px-3 py-1.5 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs"
+                          />
+                          <input
+                            value={p.url}
+                            onChange={(e) => handlePostLinkChange(idx, "url", e.target.value)}
+                            placeholder="Dán link bài viết (https://...)"
+                            className="flex-1 px-3 py-1.5 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs"
+                          />
+                          {formData.postLinks.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePostLink(idx)}
+                              className="p-1.5 text-white/40 hover:text-red-400 transition"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
+                  </div>
+
+                  {/* Link Ảnh Bìa Hoạt Động */}
+                  <div>
+                    <label className="block text-xs font-semibold text-white/80 mb-1">
+                      Link Ảnh Bìa Hoạt Động <span className="text-white/40 font-normal">(Tùy chọn)</span>
+                    </label>
+                    <input
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      placeholder="URL hình ảnh đại diện..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-white placeholder-white/30 text-xs focus:outline-none focus:border-emerald-400"
+                    />
                   </div>
 
                   {/* Mô tả hoạt động */}
