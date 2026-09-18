@@ -81,24 +81,26 @@ export default function ActivitiesSection({
             </motion.p>
           </div>
 
-          {/* NÚT MỞ BẢNG QUẢN TRỊ CHO CHỦ NHIỆM */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="flex items-center gap-3 shrink-0"
-          >
-            <button
-              onClick={() => {
-                sound.playSpark();
-                onOpenAdmin();
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.05] hover:bg-emerald-500/20 border border-white/15 hover:border-emerald-400/50 text-white hover:text-emerald-300 text-xs font-bold backdrop-blur-md shadow-lg transition active:scale-95"
+          {/* NÚT MỞ BẢNG QUẢN TRỊ CHO CHỦ NHIỆM (CHỈ HIỆN KHI ĐƯỢC CẤP QUYỀN) */}
+          {onOpenAdmin && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="flex items-center gap-3 shrink-0"
             >
-              <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Quản Trị Hoạt Động</span>
-            </button>
-          </motion.div>
+              <button
+                onClick={() => {
+                  sound.playSpark();
+                  onOpenAdmin();
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.05] hover:bg-emerald-500/20 border border-white/15 hover:border-emerald-400/50 text-white hover:text-emerald-300 text-xs font-bold backdrop-blur-md shadow-lg transition active:scale-95"
+              >
+                <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Quản Trị Hoạt Động</span>
+              </button>
+            </motion.div>
+          )}
         </div>
 
         {/* BỘ LỌC NĂM HỌC & THANH TÌM KIẾM */}

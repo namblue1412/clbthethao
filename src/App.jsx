@@ -19,7 +19,6 @@ import {
   VolumeX,
   Flame,
   Award,
-  ShieldCheck,
   Calendar,
   Lock,
 } from "lucide-react";
@@ -27,7 +26,6 @@ import {
 import Hero from "./components/Hero";
 import BanSection from "./components/BanSection";
 import ActivitiesSection from "./components/ActivitiesSection";
-import ActivityAdminModal from "./components/admin/ActivityAdminModal";
 import AthleteCard3D from "./components/3d/AthleteCard3D";
 import Floating3DObjects from "./components/3d/Floating3DObjects";
 import { THEME, SECTIONS, GOOGLE_SHEET_CONFIG } from "./data/clubData";
@@ -47,8 +45,6 @@ export default function CLBTheThaoDuoc2026() {
   const [openMenu, setOpenMenu] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [activities, setActivities] = useState(getStoredActivities);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminInitialTab, setAdminInitialTab] = useState("activities");
   const [regConfig, setRegConfig] = useState(getStoredRegistrationConfig);
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -86,12 +82,6 @@ export default function CLBTheThaoDuoc2026() {
     window.addEventListener("mousemove", handler);
     return () => window.removeEventListener("mousemove", handler);
   }, []);
-
-  // Mở modal quản trị theo tab mong muốn
-  const handleOpenAdmin = (tab = "activities") => {
-    setAdminInitialTab(tab);
-    setIsAdminOpen(true);
-  };
 
   // Đồng bộ cấu hình thời gian mở form từ xa và lắng nghe cập nhật tức thì
   useEffect(() => {
@@ -136,7 +126,6 @@ export default function CLBTheThaoDuoc2026() {
         setOpen={setOpenMenu}
         soundOn={soundOn}
         toggleSound={toggleSound}
-        onOpenAdmin={() => handleOpenAdmin("activities")}
       />
 
       {/* 1. HERO VỚI ẢNH TẬP THỂ (TAPTHE.JPG) TO ĐẸP & TIÊU ĐỀ BÊN TRÁI */}
@@ -154,32 +143,21 @@ export default function CLBTheThaoDuoc2026() {
       {/* 4. HOẠT ĐỘNG TRONG NĂM & ĐIỂM RÈN LUYỆN CHO SINH VIÊN */}
       <ActivitiesSection
         activities={activities}
-        onOpenAdmin={() => handleOpenAdmin("activities")}
       />
 
       {/* 5. ĐỐI TÁC & NHÀ TÀI TRỢ */}
       <SponsorSection />
 
-      {/* 6. THƯ VIỆN KHOẢSH KHẮC PARALLAX 3D */}
+      {/* 6. THƯ VIỆN KHOẢNH KHẮC PARALLAX 3D */}
       <GalleryParallax />
 
       {/* 7. FORM ĐĂNG KÝ VỚI THẺ VẬN ĐỘNG VIÊN 3D HOLOGRAPHIC & THỜI GIAN MỞ FORM */}
       <JoinSection
         regConfig={regConfig}
-        onOpenAdmin={handleOpenAdmin}
       />
 
       {/* CHÂN TRANG FOOTER */}
-      <Footer onOpenAdmin={() => handleOpenAdmin("activities")} />
-
-      {/* MODAL QUẢN TRỊ DÀNH RIÊNG CHO CHỦ NHIỆM CLB */}
-      <ActivityAdminModal
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        activities={activities}
-        setActivities={setActivities}
-        initialTab={adminInitialTab}
-      />
+      <Footer />
     </main>
   );
 }
@@ -187,7 +165,7 @@ export default function CLBTheThaoDuoc2026() {
 /**
  * Navbar với nút bật/tắt âm thanh tương tác
  */
-function Navbar({ open, setOpen, soundOn, toggleSound, onOpenAdmin }) {
+function Navbar({ open, setOpen, soundOn, toggleSound }) {
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl supports-[backdrop-filter]:bg-neutral-950/75 border-b border-white/10 transition-colors duration-300">
       <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
@@ -227,16 +205,8 @@ function Navbar({ open, setOpen, soundOn, toggleSound, onOpenAdmin }) {
           <NavLink href="#gallery" label="Thư viện" />
         </nav>
 
-        {/* NÚT ÂM THANH, QUẢN TRỊ & NÚT ĐĂNG KÝ */}
+        {/* NÚT ÂM THANH & NÚT ĐĂNG KÝ */}
         <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={onOpenAdmin}
-            title="Bảng Quản Trị CLB (Dành riêng cho Ban Chủ Nhiệm)"
-            className="p-2.5 rounded-full bg-white/5 hover:bg-emerald-500/20 border border-white/10 text-white/70 hover:text-emerald-300 transition-all hover:scale-105 active:scale-95"
-          >
-            <ShieldCheck className="w-4 h-4" />
-          </button>
-
           <button
             onClick={toggleSound}
             title={soundOn ? "Tắt âm thanh tương tác" : "Bật âm thanh tương tác"}
@@ -260,13 +230,6 @@ function Navbar({ open, setOpen, soundOn, toggleSound, onOpenAdmin }) {
 
         {/* NÚT MENU MOBILE */}
         <div className="md:hidden flex items-center gap-2">
-          <button
-            onClick={onOpenAdmin}
-            title="Quản trị CLB"
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/70"
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          </button>
           <button
             onClick={toggleSound}
             className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/70"
@@ -684,7 +647,7 @@ function GalleryCard({ imageNumber }) {
 /**
  * Khu vực Đăng ký (Join CTA) tích hợp Thẻ Vận Động Viên 3D tương tác realtime & Thông tin thời gian
  */
-function JoinSection({ regConfig, onOpenAdmin }) {
+function JoinSection({ regConfig }) {
   const [form, setForm] = useState({
     name: "",
     lop: "",
@@ -813,7 +776,6 @@ function JoinSection({ regConfig, onOpenAdmin }) {
               form={form}
               setForm={setForm}
               statusInfo={statusInfo}
-              onOpenAdmin={onOpenAdmin}
             />
           </div>
 
@@ -824,7 +786,7 @@ function JoinSection({ regConfig, onOpenAdmin }) {
   );
 }
 
-function JoinForm({ form, setForm, statusInfo, onOpenAdmin }) {
+function JoinForm({ form, setForm, statusInfo }) {
   const [status, setStatus] = useState("idle");
 
   // NẾU HẾT HẠN HOẶC ĐÃ ĐÓNG: TỰ ĐỘNG KHÓA FORM VÀ KHÔNG CHO GỬI NỮA
@@ -865,21 +827,10 @@ function JoinForm({ form, setForm, statusInfo, onOpenAdmin }) {
             <a
               href="#home"
               onClick={() => sound.playPop()}
-              className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition border border-white/10"
+              className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition border border-white/10"
             >
               Về Trang Chủ
             </a>
-
-            <button
-              type="button"
-              onClick={() => {
-                sound.playPop();
-                if (onOpenAdmin) onOpenAdmin("registration");
-              }}
-              className="px-5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-xs font-semibold transition border border-emerald-500/30 flex items-center gap-2"
-            >
-              <Calendar className="w-4 h-4" /> Quản Trị: Cài Đặt Thời Gian
-            </button>
           </div>
         </div>
       </div>
@@ -1127,7 +1078,7 @@ function Field({ label, children }) {
   );
 }
 
-function Footer({ onOpenAdmin }) {
+function Footer() {
   return (
     <footer className="border-t border-white/10 bg-neutral-950 pt-16 pb-8">
       <div className="mx-auto max-w-7xl px-4 flex flex-col md:flex-row items-center justify-between gap-8">
@@ -1152,14 +1103,7 @@ function Footer({ onOpenAdmin }) {
             Bản quyền © {new Date().getFullYear()} CLB Thể Thao Trường Dược
           </div>
           <p className="flex items-center justify-center md:justify-end gap-2 text-white/50">
-            <span>Thiết kế bởi Chủ nhiệm CLB Thể Thao</span>
-            <span>•</span>
-            <button
-              onClick={onOpenAdmin}
-              className="text-emerald-400/80 hover:text-emerald-300 underline transition cursor-pointer"
-            >
-              Quản trị CLB
-            </button>
+            <span>Khoa Dược — Đại học Y Dược TP. Hồ Chí Minh</span>
           </p>
         </div>
       </div>
