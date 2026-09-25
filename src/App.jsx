@@ -707,24 +707,24 @@ function JoinSection({ regConfig }) {
                 ) : (
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
                     <Lock className="w-3 h-3 text-rose-400" />
-                    Cổng Đã Khóa
+                    {statusInfo.status === "upcoming" ? "Chưa Mở Đơn" : "Cổng Đã Đóng"}
                   </span>
                 )}
               </div>
 
               <div className="bg-black/40 rounded-2xl p-3 border border-white/5 space-y-1">
                 <div className="text-xs text-white/90 font-medium flex items-center justify-between">
-                  <span>Khoảng thời gian:</span>
+                  <span>Thời gian nhận đơn:</span>
                   <span className="font-bold text-emerald-300">{statusInfo.dateRangeText}</span>
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed pt-0.5">
                   {statusInfo.isOpen
                     ? (statusInfo.daysLeft !== null
-                        ? `⚡ Hạn chót đến hết 23:59 ngày ${statusInfo.endDateFormatted} (còn ${statusInfo.daysLeft} ngày). Sau thời gian này hệ thống sẽ tự động khóa.`
-                        : "Cổng đăng ký đang mở tiếp nhận hồ sơ trực tuyến.")
+                        ? `⚡ Hạn chót: 23:59 ngày ${statusInfo.endDateFormatted} (còn ${statusInfo.daysLeft} ngày).`
+                        : "Cổng đăng ký đang tiếp nhận hồ sơ trực tuyến.")
                     : (statusInfo.status === "upcoming"
                         ? `⏳ Cổng đăng ký sẽ mở vào ngày ${statusInfo.startDateFormatted}.`
-                        : `⛔ Đợt điền form đã kết thúc vào ngày ${statusInfo.endDateFormatted}. Hệ thống đã tự động khóa phần đăng ký.`)}
+                        : `⛔ Đợt nhận đơn đã kết thúc vào ngày ${statusInfo.endDateFormatted}.`)}
                 </p>
               </div>
             </div>
@@ -770,7 +770,7 @@ function JoinSection({ regConfig }) {
             </div>
           </div>
 
-          {/* CỘT PHẢI: FORM ĐĂNG KÝ (TỰ ĐỘNG KHÓA NẾU HẾT HẠN) */}
+          {/* CỘT PHẢI: FORM ĐĂNG KÝ (HIỂN THỊ THÔNG BÁO ĐÓNG NẾU HẾT HẠN) */}
           <div className="lg:col-span-7">
             <JoinForm
               form={form}
@@ -789,8 +789,10 @@ function JoinSection({ regConfig }) {
 function JoinForm({ form, setForm, statusInfo }) {
   const [status, setStatus] = useState("idle");
 
-  // NẾU HẾT HẠN HOẶC ĐÃ ĐÓNG: TỰ ĐỘNG KHÓA FORM VÀ KHÔNG CHO GỬI NỮA
+  // NẾU HẾT HẠN HOẶC ĐÃ ĐÓNG: HIỂN THỊ THÔNG BÁO ĐÓNG CỔNG
   if (!statusInfo?.isOpen) {
+    const isUpcoming = statusInfo?.status === "upcoming";
+
     return (
       <div className="relative">
         <div className="absolute -inset-3 bg-gradient-to-r from-rose-500/20 via-amber-500/10 to-rose-500/20 blur-3xl opacity-60 -z-10 rounded-[3rem]" />
@@ -801,26 +803,33 @@ function JoinForm({ form, setForm, statusInfo }) {
           </div>
 
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 mb-3">
-            {statusInfo?.status === "upcoming" ? "Chưa Đến Thời Gian Mở Đơn" : "Cổng Đăng Ký Đã Tự Động Khóa"}
+            {isUpcoming ? "Chưa Đến Thời Gian Mở Đơn" : "Đã Hết Hạn Nhận Đơn"}
           </span>
 
-          <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">
-            {statusInfo?.status === "upcoming" ? "Sắp Mở Đợt Tuyển Thành Viên" : "Thời Hạn Điền Form Đã Kết Thúc"}
+          <h3 className="text-2xl sm:text-3xl font-black text-white mb-4">
+            {isUpcoming ? "Sắp Mở Đợt Tuyển Thành Viên" : "Thời Hạn Nhận Đơn Đã Kết Thúc"}
           </h3>
 
-          <div className="max-w-md mx-auto space-y-3 text-white/70 text-xs sm:text-sm">
+          <div className="max-w-md mx-auto space-y-4 text-white/70 text-xs sm:text-sm">
             <p className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white/90 leading-relaxed font-medium">
-              {statusInfo?.message}
+              {statusInfo?.message || "Thời hạn nhận đơn gia nhập CLB hiện đã kết thúc."}
             </p>
 
-            <p className="text-white/50 text-xs">
-              Thời gian nhận đơn đợt này: <b>{statusInfo?.startDateFormatted}</b> đến hết ngày <b>{statusInfo?.endDateFormatted}</b>.
-              Hệ thống tự động khóa phần này và không tiếp nhận form nữa sau ngày kết thúc.
-            </p>
-
-            <p className="text-white/60 text-xs pt-1">
-              Hẹn gặp lại bạn ở các đợt tuyển quân tiếp theo của CLB Thể Thao Trường Dược!
-            </p>
+            <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 text-xs text-white/60 space-y-1.5 text-center">
+              <p>
+                Thời gian nhận đơn đợt này:{" "}
+                <span className="text-emerald-300 font-semibold">
+                  {statusInfo?.startDateFormatted}
+                </span>{" "}
+                đến hết ngày{" "}
+                <span className="text-emerald-300 font-semibold">
+                  {statusInfo?.endDateFormatted}
+                </span>
+              </p>
+              <p className="text-white/40 text-[11px] leading-relaxed">
+                Cảm ơn bạn đã quan tâm đến CLB Thể Thao Trường Dược. Mọi thông tin về các đợt tuyển tiếp theo sẽ được cập nhật sớm nhất trên Fanpage và Website!
+              </p>
+            </div>
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

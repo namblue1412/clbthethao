@@ -727,7 +727,7 @@ export default function AdminPage({ onBackToHome }) {
                   />
                 </div>
                 <div className="text-sm font-bold text-white">
-                  {regPreviewStatus.isOpen ? "🟢 Đang Mở Điền Form" : "🔴 Cổng Đã Tự Động Khóa"}
+                  {regPreviewStatus.isOpen ? "🟢 Đang Mở Điền Form" : "🔴 Cổng Đã Đóng (Hết Hạn)"}
                 </div>
                 <p className="text-[11px] text-white/50 mt-1 truncate">
                   {regPreviewStatus.dateRangeText}
@@ -1237,7 +1237,7 @@ export default function AdminPage({ onBackToHome }) {
                       Cài Đặt Thời Gian Thu Thập Form
                     </h3>
                     <p className="text-xs text-white/60 mt-0.5">
-                      Admin cài đặt ngày mở và ngày kết thúc. Hệ thống sẽ tự động khóa cổng (auto-lock) và không mở form nữa sau ngày kết thúc.
+                      Admin cài đặt ngày mở và ngày kết thúc nhận đơn. Cổng đăng ký sẽ mở và đóng theo đúng thời gian đã chọn.
                     </p>
                   </div>
 
@@ -1270,14 +1270,14 @@ export default function AdminPage({ onBackToHome }) {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold text-white flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                          Tự Động Theo Ngày
+                          Theo Lịch Cài Đặt
                         </span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                           Khuyên dùng
                         </span>
                       </div>
                       <p className="text-[11px] text-white/60 leading-relaxed">
-                        Tự động mở cổng từ ngày bắt đầu và <b>khóa form sau 23:59 ngày kết thúc</b>.
+                        Mở cổng từ ngày bắt đầu và <b>đóng form sau 23:59 ngày kết thúc</b>.
                       </p>
                     </div>
 
@@ -1319,11 +1319,11 @@ export default function AdminPage({ onBackToHome }) {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-bold text-white flex items-center gap-1.5">
                           <Lock className="w-3.5 h-3.5 text-rose-400" />
-                          Khóa Cổng Ngay
+                          Đóng Cổng Ngay
                         </span>
                       </div>
                       <p className="text-[11px] text-white/60 leading-relaxed">
-                        Đóng cổng đăng ký ngay lập tức và chặn mọi thao tác điền form.
+                        Đóng cổng đăng ký ngay lập tức và ngừng nhận đơn mới.
                       </p>
                     </div>
                   </div>
@@ -1363,7 +1363,7 @@ export default function AdminPage({ onBackToHome }) {
                     <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10">
                       <label className="block text-xs font-semibold text-white/80 mb-2 flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-rose-400" />
-                        Đến Ngày (Kết thúc & Tự động khóa) *
+                        Đến Ngày (Kết thúc nhận đơn) *
                       </label>
                       <input
                         type="date"
@@ -1378,7 +1378,7 @@ export default function AdminPage({ onBackToHome }) {
                         className="w-full px-4 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs focus:outline-none focus:border-emerald-400"
                       />
                       <p className="text-[11px] text-white/50 mt-2">
-                        Tự động khóa sau 23:59 ngày:{" "}
+                        Hết hạn nhận đơn sau 23:59 ngày:{" "}
                         <b className="text-rose-300">
                           {formatDateVN(regConfigState.endDate) || "--/--/----"}
                         </b>
@@ -1421,7 +1421,7 @@ export default function AdminPage({ onBackToHome }) {
                     ) : (
                       <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
                         <Lock className="w-3 h-3 text-rose-400" />
-                        CỔNG ĐÃ TỰ ĐỘNG KHÓA
+                        CỔNG ĐĂNG KÝ ĐÃ ĐÓNG
                       </span>
                     )}
                   </div>

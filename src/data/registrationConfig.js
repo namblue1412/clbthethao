@@ -1,17 +1,17 @@
 /**
  * registrationConfig.js
  * Quản lý cấu hình thời gian thu thập form đăng ký thành viên
- * Hỗ trợ tự động khóa form (auto-lock) sau ngày kết thúc.
+ * Cổng đăng ký sẽ mở và đóng theo ngày cài đặt.
  */
 
 const STORAGE_KEY = "clb_duoc_registration_config";
 
 export const DEFAULT_REGISTRATION_CONFIG = {
-  mode: "auto", // "auto": Tự động theo ngày | "open": Luôn mở | "closed": Khóa ngay
+  mode: "auto", // "auto": Theo ngày cài đặt | "open": Luôn mở | "closed": Khóa ngay
   startDate: "2026-09-01",
   endDate: "2026-10-31",
   title: "Đợt Tuyển Thành Viên Mùa 2026",
-  closedMessage: "Thời hạn nhận đơn gia nhập CLB hiện đã kết thúc. Hẹn gặp bạn ở đợt tuyển tiếp theo của CLB Thể Thao Trường Dược!",
+  closedMessage: "Thời hạn nhận đơn gia nhập CLB hiện đã kết thúc. Hẹn gặp bạn ở các đợt tuyển tiếp theo của CLB Thể Thao Trường Dược!",
   contactEmail: "clbthethaotruongduoc@gmail.com",
   contactPhone: "0912 345 678",
 };
@@ -105,7 +105,7 @@ export function checkRegistrationStatus(config = getStoredRegistrationConfig()) 
     };
   }
 
-  // 3. Chế độ tự động (Auto theo ngày startDate & endDate)
+  // 3. Chế độ theo lịch cài đặt (theo ngày startDate & endDate)
   const now = new Date();
   
   // Tính mốc bắt đầu: 00:00:00 ngày startDate
@@ -129,28 +129,28 @@ export function checkRegistrationStatus(config = getStoredRegistrationConfig()) 
     return {
       isOpen: false,
       status: "upcoming",
-      badgeText: "Sắp mở cổng đăng ký",
+      badgeText: "Sắp mở đơn",
       badgeColor: "amber",
       startDateFormatted: startFormatted,
       endDateFormatted: endFormatted,
       dateRangeText: `Từ ${startFormatted} đến ${endFormatted}`,
       daysLeft: daysUntil,
-      message: `Cổng đăng ký sẽ chính thức mở vào ngày ${startFormatted} (còn ${daysUntil} ngày nữa).`,
+      message: `Cổng đăng ký sẽ mở vào ngày ${startFormatted} (còn ${daysUntil} ngày nữa).`,
     };
   }
 
-  // B. Đã quá ngày kết thúc (Auto-lock)
+  // B. Đã quá ngày kết thúc (Hết hạn nhận đơn)
   if (endTime && now > endTime) {
     return {
       isOpen: false,
       status: "expired",
-      badgeText: "Đã kết thúc nhận đơn",
+      badgeText: "Đã hết hạn nhận đơn",
       badgeColor: "rose",
       startDateFormatted: startFormatted,
       endDateFormatted: endFormatted,
       dateRangeText: `Từ ${startFormatted} đến ${endFormatted}`,
       daysLeft: 0,
-      message: closedMessage || `Thời gian nhận đơn đã kết thúc vào ngày ${endFormatted}.`,
+      message: closedMessage || `Thời hạn nhận đơn đã kết thúc vào ngày ${endFormatted}.`,
     };
   }
 
